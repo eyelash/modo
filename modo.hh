@@ -141,12 +141,28 @@ public:
 	}
 };
 
-class Mult: public Node<float> {
+class Gain: public Node<float> {
 public:
-	Input<float> input1;
-	Input<float> input2;
+	Input<float> input;
+	Input<float> amount;
 	float produce() override {
-		return input1.get() * input2.get();
+		const float _amount = amount.get();
+		if (_amount > 0.f) {
+			return input.get() * _amount;
+		}
+		return 0.f;
+	}
+};
+
+class Overdrive: public Node<float> {
+	static constexpr float clamp(float y) {
+		return y > 1.f ? 1.f : (y < -1.f ? -1.f : y);
+	}
+public:
+	Input<float> input;
+	Input<float> amount;
+	float produce() override {
+		return clamp(input.get() * amount.get());
 	}
 };
 
