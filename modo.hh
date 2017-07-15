@@ -166,6 +166,32 @@ public:
 	}
 };
 
+struct MIDIEvent {
+	uchar status;
+	uchar data1;
+	uchar data2;
+	constexpr MIDIEvent(): status(0), data1(0), data2(2) {}
+	constexpr MIDIEvent(uchar status, uchar data1, uchar data2): status(status), data1(data1), data2(data2) {}
+	static constexpr MIDIEvent create_note_off(uchar note, uchar velocity, uchar channel) {
+		return MIDIEvent(0x80 | channel, note, velocity);
+	}
+	static constexpr MIDIEvent create_note_on(uchar note, uchar velocity, uchar channel) {
+		return MIDIEvent(0x90 | channel, note, velocity);
+	}
+	constexpr operator bool() const {
+		return status & 0x80;
+	}
+	constexpr bool is_note_off() const {
+		return (status & 0xF0) == 0x80;
+	}
+	constexpr bool is_note_on() const {
+		return (status & 0xF0) == 0x90;
+	}
+	constexpr uchar get_channel() const {
+		return status & 0x0F;
+	}
+};
+
 class WAVOutput {
 	std::ofstream file;
 	template <class T> void write(T data) {
