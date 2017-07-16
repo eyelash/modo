@@ -166,6 +166,20 @@ public:
 	}
 };
 
+template <size_t N> class Delay: public Node<float> {
+	float buffer[N];
+	size_t position;
+public:
+	Input<float> input;
+	Delay(): buffer(), position(0) {}
+	float produce() override {
+		const float sample = buffer[position];
+		buffer[position] = input.get();
+		position = (position + 1) % N;
+		return sample;
+	}
+};
+
 struct MIDIEvent {
 	uchar status;
 	uchar data1;
