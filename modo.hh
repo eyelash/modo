@@ -180,6 +180,66 @@ public:
 	}
 };
 
+class Automation: public Node<float> {
+	const char* automation;
+	const char* cursor;
+	float value;
+	float delta;
+	float t;
+	float parse_number() {
+		float number = 0.f;
+		bool negative = false;
+		if (*cursor == '-') {
+			negative = true;
+			++cursor;
+		}
+		while (*cursor >= '0' && *cursor <= '9') {
+			number = (number * 10.f) + (*cursor - '0');
+			++cursor;
+		}
+		if (*cursor == '.') {
+			++cursor;
+			float factor = .1f;
+			while (*cursor >= '0' && *cursor <= '9') {
+				number += (*cursor - '0') * factor;
+				factor /= 10.f;
+				++cursor;
+			}
+		}
+		return number;
+	}
+	void skip_space() {
+		while (*cursor == ' ') {
+			++cursor;
+		}
+	}
+public:
+	Automation(const char* automation): automation(automation), cursor(automation), value(0.f), delta(0.f), t(0.f) {}
+	float produce() override {
+		value += delta * DT;
+		t -= DT;
+		if (t <= 0.f) {
+			if (*cursor != '\0') {
+				const float new_value = parse_number();
+				if (*cursor == '/') {
+					++cursor;
+					t = parse_number();
+					delta = (new_value - value) / t;
+				}
+				else {
+					value = new_value;
+					delta = 0.f;
+				}
+				skip_space();
+			}
+			else {
+				delta = 0.f;
+			}
+		}
+		return value;
+	}
+};
+
 struct MIDIEvent {
 	uchar status;
 	uchar data1;
