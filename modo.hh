@@ -141,6 +141,30 @@ public:
 	}
 };
 
+class Xorshift128plus {
+	uint64_t s[2];
+public:
+	Xorshift128plus(): s{0, 0xC0DEC0DEC0DEC0DE} {}
+	uint64_t get_next() {
+		const uint64_t result = s[0] + s[1];
+		const uint64_t s1 = s[0] ^ (s[0] << 23);
+		s[0] = s[1];
+		s[1] = s1 ^ s[1] ^ (s1 >> 18) ^ (s[1] >> 5);
+		return result;
+	}
+	float get_next_float() {
+		return get_next() / static_cast<float>(0xFFFFFFFFFFFFFFFF) * 2.f - 1.f;
+	}
+};
+
+class Noise: public Node<float> {
+public:
+	float produce() override {
+		static Xorshift128plus generator;
+		return generator.get_next_float();
+	}
+};
+
 class Gain: public Node<float> {
 public:
 	Input<float> input;
