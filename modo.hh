@@ -204,6 +204,24 @@ public:
 	}
 };
 
+class Resonator: public Node<float> {
+	float y;
+	float v;
+public:
+	Input<float> input;
+	Input<float> frequency;
+	Input<float> sensitivity;
+	Resonator(): y(0.f), v(0.f) {}
+	float produce() override {
+		const float f = frequency.get() * 2.f * PI;
+		const float s = sensitivity.get();
+		const float F = (input.get()*s - y)*f*f - v*s*f;
+		v += F * DT;
+		y += v * DT;
+		return y;
+	}
+};
+
 class Automation: public Node<float> {
 	const char* automation;
 	const char* cursor;
