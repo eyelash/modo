@@ -29,6 +29,17 @@ using uchar = unsigned char;
 constexpr float PI = 3.1415927f;
 constexpr float DT = 1.f / 44100.f;
 
+struct Sample {
+	float left;
+	float right;
+	constexpr Sample(): left(), right() {}
+	constexpr Sample(float sample): left(sample), right(sample) {}
+	constexpr Sample(float left, float right): left(left), right(right) {}
+	constexpr Sample operator +(const Sample& sample) const {
+		return Sample(left + sample.left, right + sample.right);
+	}
+};
+
 class Time {
 	uint t;
 public:
@@ -317,7 +328,7 @@ class WAVOutput {
 		file.write(tag, 4);
 	}
 public:
-	Input<float> input;
+	Input<Sample> input;
 	WAVOutput(const char* file_name): file(file_name, std::ios_base::binary) {}
 	void run(size_t frames) {
 		write_tag("RIFF");
@@ -327,16 +338,18 @@ public:
 		write_tag("fmt ");
 		write<uint32_t>(16); // fmt chunk size
 		write<uint16_t>(1); // format
-		write<uint16_t>(1); // channels
+		write<uint16_t>(2); // channels
 		write<uint32_t>(44100); // sample rate
-		write<uint32_t>(44100 * 2); // bytes per second
-		write<uint16_t>(2); // bytes per frame
+		write<uint32_t>(44100 * 2 * 2); // bytes per second
+		write<uint16_t>(2 * 2); // bytes per frame
 		write<uint16_t>(16); // bits per sample
 
 		write_tag("data");
 		write<uint32_t>(frames * 2);
 		for (size_t i = 0; i < frames; ++i) {
-			write<int16_t>(input.get() * 32767.f + .5f);
+			const Sample sample = input.get();
+			write<int16_t>(sample.left * 32767.f + .5f);
+			write<int16_t>(sample.right * 32767.f + .5f);
 			++Time::now();
 		}
 	}
