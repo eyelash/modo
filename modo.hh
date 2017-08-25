@@ -32,11 +32,14 @@ constexpr float DT = 1.f / 44100.f;
 struct Sample {
 	float left;
 	float right;
-	constexpr Sample(): left(), right() {}
+	constexpr Sample(): left(0.f), right(0.f) {}
 	constexpr Sample(float sample): left(sample), right(sample) {}
 	constexpr Sample(float left, float right): left(left), right(right) {}
 	constexpr Sample operator +(const Sample& sample) const {
 		return Sample(left + sample.left, right + sample.right);
+	}
+	constexpr Sample operator *(float f) const {
+		return Sample(left * f, right * f);
 	}
 };
 
@@ -189,6 +192,17 @@ public:
 	}
 };
 
+class Pan: public Node<Sample> {
+public:
+	Input<float> input;
+	Input<float> pan;
+	Sample produce() override {
+		const float i = input.get() * .5f;
+		const float p = pan.get();
+		return Sample(i * (1.f - p), i * (p + 1.f));
+	}
+};
+
 class Overdrive: public Node<float> {
 	static constexpr float clamp(float y) {
 		return y > 1.f ? 1.f : (y < -1.f ? -1.f : y);
@@ -332,7 +346,7 @@ public:
 	WAVOutput(const char* file_name): file(file_name, std::ios_base::binary) {}
 	void run(size_t frames) {
 		write_tag("RIFF");
-		write<uint32_t>(36 + frames * 2);
+		write<uint32_t>(36 + frames * 2 * 2);
 		write_tag("WAVE");
 
 		write_tag("fmt ");
@@ -345,7 +359,7 @@ public:
 		write<uint16_t>(16); // bits per sample
 
 		write_tag("data");
-		write<uint32_t>(frames * 2);
+		write<uint32_t>(frames * 2 * 2);
 		for (size_t i = 0; i < frames; ++i) {
 			const Sample sample = input.get();
 			write<int16_t>(sample.left * 32767.f + .5f);
