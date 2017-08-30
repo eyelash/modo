@@ -316,6 +316,21 @@ struct MIDIEvent {
 	}
 };
 
+class MIDIClock: public Node<MIDIEvent> {
+	float value;
+public:
+	Input<float> bpm;
+	MIDIClock(): value(1.f) {}
+	MIDIEvent produce(int t) override {
+		value += bpm.get(t) / 60.f * 24.f * DT;
+		if (value > 1.f) {
+			value -= 1.f;
+			return MIDIEvent(0xF8, 0, 0);
+		}
+		return MIDIEvent();
+	}
+};
+
 class WAVOutput {
 	std::ofstream file;
 	template <class T> void write(T data) {
