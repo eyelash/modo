@@ -43,25 +43,9 @@ struct Sample {
 	}
 };
 
-class Time {
-	uint t;
-public:
-	constexpr Time(): t(0) {}
-	static Time& now() {
-		static Time time;
-		return time;
-	}
-	constexpr bool operator <(const Time& rhs) const {
-		return t < rhs.t;
-	}
-	void operator ++() {
-		++t;
-	}
-};
-
 template <class T> class Output {
 public:
-	virtual T get() = 0;
+	virtual T get(int t) = 0;
 };
 
 template <class T> class Value: public Output<T> {
@@ -71,7 +55,7 @@ public:
 	void set(const T& value) {
 		this->value = value;
 	}
-	T get() override {
+	T get(int t) override {
 		return value;
 	}
 };
@@ -88,8 +72,8 @@ public:
 		this->value.set(value);
 		this->output = &this->value;
 	}
-	T get() override {
-		return output->get();
+	T get(int t) override {
+		return output->get(t);
 	}
 };
 
@@ -102,13 +86,14 @@ template <class T> void operator >>(const T& t, Input<T>& i) {
 
 template <class T> class Node: public Output<T> {
 	T value;
-	Time time;
+	int t;
 public:
-	virtual T produce() = 0;
-	T get() override {
-		while (time < Time::now()) {
-			value = produce();
-			++time;
+	Node(): value(), t(0) {}
+	virtual T produce(int t) = 0;
+	T get(int t) override {
+		if (t != this->t) {
+			this->t = t;
+			value = produce(t);
 		}
 		return value;
 	}
@@ -120,9 +105,9 @@ class Osc: public Node<float> {
 public:
 	Input<float> frequency;
 	Osc(): sin(0.f), cos(1.f) {}
-	float produce() override {
-		cos += -sin * frequency.get() * 2.f * PI * DT;
-		sin += cos * frequency.get() * 2.f * PI * DT;
+	float produce(int t) override {
+		cos += -sin * frequency.get(t) * 2.f * PI * DT;
+		sin += cos * frequency.get(t) * 2.f * PI * DT;
 		return sin;
 	}
 };
@@ -132,8 +117,8 @@ class Saw: public Node<float> {
 public:
 	Input<float> frequency;
 	Saw(): value(0.f) {}
-	float produce() override {
-		value += frequency.get() * 2.f * DT;
+	float produce(int t) override {
+		value += frequency.get(t) * 2.f * DT;
 		if (value > 1.f) {
 			value = -1.f;
 		}
@@ -146,8 +131,8 @@ class Square: public Node<float> {
 public:
 	Input<float> frequency;
 	Square(): value(0.f) {}
-	float produce() override {
-		value += frequency.get() * DT;
+	float produce(int t) override {
+		value += frequency.get(t) * DT;
 		if (value > 1.f) {
 			value = 0.f;
 		}
@@ -173,7 +158,7 @@ public:
 
 class Noise: public Node<float> {
 public:
-	float produce() override {
+	float produce(int t) override {
 		static Xorshift128plus generator;
 		return generator.get_next_float();
 	}
@@ -183,10 +168,10 @@ class Gain: public Node<float> {
 public:
 	Input<float> input;
 	Input<float> amount;
-	float produce() override {
-		const float _amount = amount.get();
+	float produce(int t) override {
+		const float _amount = amount.get(t);
 		if (_amount > 0.f) {
-			return input.get() * _amount;
+			return input.get(t) * _amount;
 		}
 		return 0.f;
 	}
@@ -196,9 +181,9 @@ class Pan: public Node<Sample> {
 public:
 	Input<float> input;
 	Input<float> pan;
-	Sample produce() override {
-		const float i = input.get() * .5f;
-		const float p = pan.get();
+	Sample produce(int t) override {
+		const float i = input.get(t) * .5f;
+		const float p = pan.get(t);
 		return Sample(i * (1.f - p), i * (p + 1.f));
 	}
 };
@@ -210,8 +195,8 @@ class Overdrive: public Node<float> {
 public:
 	Input<float> input;
 	Input<float> amount;
-	float produce() override {
-		return clamp(input.get() * amount.get());
+	float produce(int t) override {
+		return clamp(input.get(t) * amount.get(t));
 	}
 };
 
@@ -221,9 +206,9 @@ template <size_t N> class Delay: public Node<float> {
 public:
 	Input<float> input;
 	Delay(): buffer(), position(0) {}
-	float produce() override {
+	float produce(int t) override {
 		const float sample = buffer[position];
-		buffer[position] = input.get();
+		buffer[position] = input.get(t);
 		position = (position + 1) % N;
 		return sample;
 	}
@@ -237,10 +222,10 @@ public:
 	Input<float> frequency;
 	Input<float> sensitivity;
 	Resonator(): y(0.f), v(0.f) {}
-	float produce() override {
-		const float f = frequency.get() * 2.f * PI;
-		const float s = sensitivity.get();
-		const float F = (input.get()*s - y)*f*f - v*s*f;
+	float produce(int t) override {
+		const float f = frequency.get(t) * 2.f * PI;
+		const float s = sensitivity.get(t);
+		const float F = (input.get(t)*s - y)*f*f - v*s*f;
 		v += F * DT;
 		y += v * DT;
 		return y;
@@ -282,7 +267,7 @@ class Automation: public Node<float> {
 	}
 public:
 	Automation(const char* automation): automation(automation), cursor(automation), value(0.f), delta(0.f), t(0.f) {}
-	float produce() override {
+	float produce(int _t) override {
 		value += delta * DT;
 		t -= DT;
 		if (t <= 0.f) {
@@ -344,7 +329,7 @@ class WAVOutput {
 public:
 	Input<Sample> input;
 	WAVOutput(const char* file_name): file(file_name, std::ios_base::binary) {}
-	void run(size_t frames) {
+	void run(int frames) {
 		write_tag("RIFF");
 		write<uint32_t>(36 + frames * 2 * 2);
 		write_tag("WAVE");
@@ -360,11 +345,10 @@ public:
 
 		write_tag("data");
 		write<uint32_t>(frames * 2 * 2);
-		for (size_t i = 0; i < frames; ++i) {
-			const Sample sample = input.get();
+		for (int t = 1; t <= frames; ++t) {
+			const Sample sample = input.get(t);
 			write<int16_t>(sample.left * 32767.f + .5f);
 			write<int16_t>(sample.right * 32767.f + .5f);
-			++Time::now();
 		}
 	}
 };

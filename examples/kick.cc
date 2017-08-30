@@ -9,8 +9,8 @@ public:
 	Kick(): frequency("130 45/.1"), envelope("0 .9/.01 .3/.2 0/.4") {
 		frequency >> osc.frequency;
 	}
-	Sample produce() override {
-		return osc.get() * envelope.get();
+	Sample produce(int t) override {
+		return osc.get(t) * envelope.get(t);
 	}
 };
 
