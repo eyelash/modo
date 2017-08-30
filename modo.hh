@@ -106,8 +106,9 @@ public:
 	Input<float> frequency;
 	Osc(): sin(0.f), cos(1.f) {}
 	float produce(int t) override {
-		cos += -sin * frequency.get(t) * 2.f * PI * DT;
-		sin += cos * frequency.get(t) * 2.f * PI * DT;
+		const float f = frequency.get(t) * 2.f * PI * DT;
+		cos += -sin * f;
+		sin += cos * f;
 		return sin;
 	}
 };
@@ -169,22 +170,19 @@ public:
 	Input<float> input;
 	Input<float> amount;
 	float produce(int t) override {
-		const float _amount = amount.get(t);
-		if (_amount > 0.f) {
-			return input.get(t) * _amount;
-		}
-		return 0.f;
+		return input.get(t) * amount.get(t);
 	}
 };
 
 class Pan: public Node<Sample> {
 public:
+	static constexpr Sample pan(float input, float panning) {
+		return Sample(input * .5f * (1.f - panning), input * .5f * (panning + 1.f));
+	}
 	Input<float> input;
-	Input<float> pan;
+	Input<float> panning;
 	Sample produce(int t) override {
-		const float i = input.get(t) * .5f;
-		const float p = pan.get(t);
-		return Sample(i * (1.f - p), i * (p + 1.f));
+		return pan(input.get(t), panning.get(t));
 	}
 };
 
