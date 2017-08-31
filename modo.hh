@@ -89,11 +89,14 @@ template <class T> class Node: public Output<T> {
 	int t;
 public:
 	Node(): value(), t(0) {}
-	virtual T produce(int t) = 0;
+	virtual T produce() = 0;
+	template <class T2> T2 get(Output<T2>& output) const {
+		return output.get(t);
+	}
 	T get(int t) override {
 		if (t != this->t) {
 			this->t = t;
-			value = produce(t);
+			value = produce();
 		}
 		return value;
 	}
@@ -105,8 +108,8 @@ class Osc: public Node<float> {
 public:
 	Input<float> frequency;
 	Osc(): sin(0.f), cos(1.f) {}
-	float produce(int t) override {
-		const float f = frequency.get(t) * 2.f * PI * DT;
+	float produce() override {
+		const float f = get(frequency) * 2.f * PI * DT;
 		cos += -sin * f;
 		sin += cos * f;
 		return sin;
@@ -118,8 +121,8 @@ class Saw: public Node<float> {
 public:
 	Input<float> frequency;
 	Saw(): value(0.f) {}
-	float produce(int t) override {
-		value += frequency.get(t) * 2.f * DT;
+	float produce() override {
+		value += get(frequency) * 2.f * DT;
 		if (value > 1.f) {
 			value = -1.f;
 		}
@@ -132,8 +135,8 @@ class Square: public Node<float> {
 public:
 	Input<float> frequency;
 	Square(): value(0.f) {}
-	float produce(int t) override {
-		value += frequency.get(t) * DT;
+	float produce() override {
+		value += get(frequency) * DT;
 		if (value > 1.f) {
 			value = 0.f;
 		}
@@ -159,7 +162,7 @@ public:
 
 class Noise: public Node<float> {
 public:
-	float produce(int t) override {
+	float produce() override {
 		static Xorshift128plus generator;
 		return generator.get_next_float();
 	}
@@ -169,8 +172,8 @@ class Gain: public Node<float> {
 public:
 	Input<float> input;
 	Input<float> amount;
-	float produce(int t) override {
-		return input.get(t) * amount.get(t);
+	float produce() override {
+		return get(input) * get(amount);
 	}
 };
 
@@ -181,8 +184,8 @@ public:
 	}
 	Input<float> input;
 	Input<float> panning;
-	Sample produce(int t) override {
-		return pan(input.get(t), panning.get(t));
+	Sample produce() override {
+		return pan(get(input), get(panning));
 	}
 };
 
@@ -193,8 +196,8 @@ class Overdrive: public Node<float> {
 public:
 	Input<float> input;
 	Input<float> amount;
-	float produce(int t) override {
-		return clamp(input.get(t) * amount.get(t));
+	float produce() override {
+		return clamp(get(input) * get(amount));
 	}
 };
 
@@ -204,9 +207,9 @@ template <size_t N> class Delay: public Node<float> {
 public:
 	Input<float> input;
 	Delay(): buffer(), position(0) {}
-	float produce(int t) override {
+	float produce() override {
 		const float sample = buffer[position];
-		buffer[position] = input.get(t);
+		buffer[position] = get(input);
 		position = (position + 1) % N;
 		return sample;
 	}
@@ -220,10 +223,10 @@ public:
 	Input<float> frequency;
 	Input<float> sensitivity;
 	Resonator(): y(0.f), v(0.f) {}
-	float produce(int t) override {
-		const float f = frequency.get(t) * 2.f * PI;
-		const float s = sensitivity.get(t);
-		const float F = (input.get(t)*s - y)*f*f - v*s*f;
+	float produce() override {
+		const float f = get(frequency) * 2.f * PI;
+		const float s = get(sensitivity);
+		const float F = (get(input)*s - y)*f*f - v*s*f;
 		v += F * DT;
 		y += v * DT;
 		return y;
@@ -265,7 +268,7 @@ class Automation: public Node<float> {
 	}
 public:
 	Automation(const char* automation): automation(automation), cursor(automation), value(0.f), delta(0.f), t(0.f) {}
-	float produce(int _t) override {
+	float produce() override {
 		value += delta * DT;
 		t -= DT;
 		if (t <= 0.f) {
@@ -321,8 +324,8 @@ class MIDIClock: public Node<MIDIEvent> {
 public:
 	Input<float> bpm;
 	MIDIClock(): value(1.f) {}
-	MIDIEvent produce(int t) override {
-		value += bpm.get(t) / 60.f * 24.f * DT;
+	MIDIEvent produce() override {
+		value += get(bpm) / 60.f * 24.f * DT;
 		if (value > 1.f) {
 			value -= 1.f;
 			return MIDIEvent(0xF8, 0, 0);
