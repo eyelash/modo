@@ -189,6 +189,15 @@ public:
 	}
 };
 
+class Mono: public Node<float> {
+public:
+	Input<Sample> input;
+	float produce() override {
+		const Sample sample = get(input);
+		return (sample.left + sample.right) * .5f;
+	}
+};
+
 class Overdrive: public Node<float> {
 	static constexpr float clamp(float y) {
 		return y > 1.f ? 1.f : (y < -1.f ? -1.f : y);
