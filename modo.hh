@@ -29,6 +29,30 @@ using uchar = unsigned char;
 constexpr float PI = 3.1415927f;
 constexpr float DT = 1.f / 44100.f;
 
+class Xorshift128plus {
+	uint64_t s[2];
+public:
+	Xorshift128plus(): s{0, 0xC0DEC0DEC0DEC0DE} {}
+	uint64_t get_next() {
+		const uint64_t result = s[0] + s[1];
+		const uint64_t s1 = s[0] ^ (s[0] << 23);
+		s[0] = s[1];
+		s[1] = s1 ^ s[1] ^ (s1 >> 18) ^ (s[1] >> 5);
+		return result;
+	}
+};
+
+class Random {
+public:
+	static uint64_t get() {
+		static Xorshift128plus generator;
+		return generator.get_next();
+	}
+	static float get_float() {
+		return get() / static_cast<float>(0xFFFFFFFFFFFFFFFF);
+	}
+};
+
 struct Sample {
 	float left;
 	float right;
@@ -144,27 +168,10 @@ public:
 	}
 };
 
-class Xorshift128plus {
-	uint64_t s[2];
-public:
-	Xorshift128plus(): s{0, 0xC0DEC0DEC0DEC0DE} {}
-	uint64_t get_next() {
-		const uint64_t result = s[0] + s[1];
-		const uint64_t s1 = s[0] ^ (s[0] << 23);
-		s[0] = s[1];
-		s[1] = s1 ^ s[1] ^ (s1 >> 18) ^ (s[1] >> 5);
-		return result;
-	}
-	float get_next_float() {
-		return get_next() / static_cast<float>(0xFFFFFFFFFFFFFFFF) * 2.f - 1.f;
-	}
-};
-
 class Noise: public Node<float> {
 public:
 	float produce() override {
-		static Xorshift128plus generator;
-		return generator.get_next_float();
+		return Random::get_float() * 2.f - 1.f;
 	}
 };
 
@@ -180,7 +187,7 @@ public:
 class Pan: public Node<Sample> {
 public:
 	static constexpr Sample pan(float input, float panning) {
-		return Sample(input * .5f * (1.f - panning), input * .5f * (panning + 1.f));
+		return Sample(input * (.5f - panning * .5f), input * (.5f + panning * .5f));
 	}
 	Input<float> input;
 	Input<float> panning;
