@@ -30,6 +30,7 @@ constexpr float PI = 3.1415927f;
 constexpr float DT = 1.f / 44100.f;
 
 class Xorshift128plus {
+	// xorshift128+ algorithm by Sebastiano Vigna
 	uint64_t s[2];
 public:
 	Xorshift128plus(): s{0, 0xC0DEC0DEC0DEC0DE} {}
@@ -246,6 +247,90 @@ public:
 		v += F * DT;
 		y += v * DT;
 		return y;
+	}
+};
+
+class Freeverb: public Node<Sample> {
+	// freeverb algorithm by Jezar at Dreampoint
+	template <size_t N> class Comb {
+		std::array<float, N> buffer;
+		size_t position;
+		float previous;
+	public:
+		Comb(): buffer(), position(0), previous(0.f) {}
+		float process(float input, float feedback, float damp) {
+			const float output = buffer[position];
+			// low-pass filter
+			const float filtered = output * (1.f - damp) + previous * damp;
+			previous = filtered;
+			buffer[position] = input + filtered * feedback;
+			position = (position + 1) % N;
+			return output;
+		}
+	};
+	template <size_t N> class AllPass {
+		std::array<float, N> buffer;
+		size_t position;
+	public:
+		AllPass(): buffer(), position(0) {}
+		float process(float input) {
+			constexpr float feedback = .5f;
+			const float output = buffer[position];
+			buffer[position] = input + output * feedback;
+			position = (position + 1) % N;
+			return output - input;
+		}
+	};
+	template <size_t S> class Channel {
+		Comb<1116+S> comb1;
+		Comb<1188+S> comb2;
+		Comb<1277+S> comb3;
+		Comb<1356+S> comb4;
+		Comb<1422+S> comb5;
+		Comb<1491+S> comb6;
+		Comb<1557+S> comb7;
+		Comb<1617+S> comb8;
+		AllPass<556+S> all_pass1;
+		AllPass<441+S> all_pass2;
+		AllPass<341+S> all_pass3;
+		AllPass<225+S> all_pass4;
+	public:
+		float process(float input, float feedback, float damp) {
+			float result = 0.f;
+			// process comb filters in parallel
+			result += comb1.process(input, feedback, damp);
+			result += comb2.process(input, feedback, damp);
+			result += comb3.process(input, feedback, damp);
+			result += comb4.process(input, feedback, damp);
+			result += comb5.process(input, feedback, damp);
+			result += comb6.process(input, feedback, damp);
+			result += comb7.process(input, feedback, damp);
+			result += comb8.process(input, feedback, damp);
+			// process all-pass filters in series
+			result = all_pass1.process(result);
+			result = all_pass2.process(result);
+			result = all_pass3.process(result);
+			result = all_pass4.process(result);
+			return result;
+		}
+	};
+	Channel<0> channel1;
+	Channel<23> channel2;
+public:
+	Input<float> input;
+	Input<float> room_size;
+	Input<float> damp;
+	Input<float> wet;
+	Input<float> dry;
+	Input<float> width;
+	Sample produce() override {
+		const float _input = get(input) * .03f;
+		const float feedback = get(room_size) * .28f + .7f;
+		const float _damp = get(damp) * .4f;
+		const float output1 = channel1.process(_input, feedback, _damp);
+		const float output2 = channel2.process(_input, feedback, _damp);
+		const Sample w = Pan::pan(get(wet) * 3.f, get(width));
+		return Sample(output1 * w.right + output2 * w.left, output2 * w.right + output1 * w.left) + get(input) * (get(dry) * 2.f);
 	}
 };
 
