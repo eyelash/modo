@@ -15,8 +15,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 */
 
-#ifndef MODO_HH
-#define MODO_HH
+#pragma once
 
 #include <cmath>
 #include <array>
@@ -539,5 +538,3 @@ public:
 };
 
 } // namespace modo
-
-#endif // MODO_HH
