@@ -29,6 +29,27 @@ using uchar = unsigned char;
 constexpr float PI = 3.1415927f;
 constexpr float DT = 1.f / 44100.f;
 
+template <class T, size_t N> class Queue {
+	T data[N];
+	size_t start;
+	size_t size;
+public:
+	Queue(): start(0), size(0) {}
+	void put(const T& element) {
+		data[(start+size)%N] = element;
+		++size;
+	}
+	T take() {
+		T element = data[start];
+		start = (start + 1) % N;
+		--size;
+		return element;
+	}
+	bool is_empty() const {
+		return size == 0;
+	}
+};
+
 class Xorshift128plus {
 	// xorshift128+ algorithm by Sebastiano Vigna
 	uint64_t s[2];
@@ -430,6 +451,53 @@ public:
 		if (value > 1.f) {
 			value -= 1.f;
 			return MIDIEvent(0xF8, 0, 0);
+		}
+		return MIDIEvent();
+	}
+};
+
+class NotePattern {
+	uchar note;
+	const char* pattern;
+public:
+	NotePattern(uchar note, const char* pattern): note(note), pattern(pattern) {}
+	MIDIEvent operator [](size_t t) const {
+		if (t % 6 == 5) {
+			const char prev = pattern[t/6];
+			const char next = pattern[(t/6+1)%16];
+			if (prev != ' ' && next != '-') {
+				return MIDIEvent::create_note_off(note, 127, 0);
+			}
+		}
+		else if (t % 6 == 0) {
+			const char c = pattern[t/6];
+			if (c >= '0' && c <= '8') {
+				return MIDIEvent::create_note_on(note, (c - '0') * 15, 0);
+			}
+		}
+		return MIDIEvent();
+	}
+};
+
+template <size_t N> class Pattern: public Node<MIDIEvent> {
+	std::array<NotePattern, N> patterns;
+	Queue<MIDIEvent, N> queue;
+	int t;
+public:
+	Input<MIDIEvent> clock;
+	Pattern(const std::array<NotePattern, N>& patterns): patterns(patterns), t(0) {}
+	MIDIEvent produce() override {
+		if (get(clock).status == 0xF8) {
+			for (auto& pattern: patterns) {
+				const MIDIEvent event = pattern[t];
+				if (event) {
+					queue.put(event);
+				}
+			}
+			t = (t + 1) % (6 * 4 * 4);
+		}
+		if (!queue.is_empty()) {
+			return queue.take();
 		}
 		return MIDIEvent();
 	}
