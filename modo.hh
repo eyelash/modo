@@ -362,9 +362,9 @@ class Automation: public Node<float> {
 	float t;
 	float parse_number() {
 		float number = 0.f;
-		bool negative = false;
+		float sign = 1.f;
 		if (*cursor == '-') {
-			negative = true;
+			sign = -1.f;
 			++cursor;
 		}
 		while (*cursor >= '0' && *cursor <= '9') {
@@ -380,7 +380,7 @@ class Automation: public Node<float> {
 				++cursor;
 			}
 		}
-		return number;
+		return number * sign;
 	}
 	void skip_space() {
 		while (*cursor == ' ') {
