@@ -455,6 +455,33 @@ public:
 	}
 };
 
+class Frequency: public Node<float> {
+	float frequency;
+public:
+	Input<MIDIEvent> input;
+	float produce() override {
+		const MIDIEvent event = get(input);
+		if (event.is_note_on()) {
+			const uchar note = event.data1;
+			frequency = 440.f * std::pow(2.f, (note-69)/12.f);
+		}
+		return frequency;
+	}
+};
+
+class Velocity: public Node<float> {
+	float velocity;
+public:
+	Input<MIDIEvent> input;
+	float produce() override {
+		const MIDIEvent event = get(input);
+		if (event.is_note_on()) {
+			velocity = event.data2 / 127.f;
+		}
+		return velocity;
+	}
+};
+
 class NotePattern {
 	uchar note;
 	const char* pattern;
