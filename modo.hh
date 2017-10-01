@@ -182,9 +182,9 @@ public:
 	Input<float> frequency;
 	Saw(): value(0.f) {}
 	float produce() override {
-		value += get(frequency) * 2.f * DT;
+		value += get(frequency) * (2.0 * DT);
 		if (value > 1.f) {
-			value = -1.f;
+			value -= 2.f;
 		}
 		return value;
 	}
@@ -198,7 +198,7 @@ public:
 	float produce() override {
 		value += get(frequency) * DT;
 		if (value > 1.f) {
-			value = 0.f;
+			value -= 1.f;
 		}
 		return value > .5f ? 1.f : -1.f;
 	}
