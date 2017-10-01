@@ -28,19 +28,34 @@ using uchar = unsigned char;
 constexpr float PI = 3.1415927f;
 constexpr float DT = 1.f / 44100.f;
 
-template <class T, size_t N> class Queue {
+template <class T, size_t N> class RingBuffer {
 	T data[N];
 	size_t start;
+public:
+	RingBuffer(): data(), start(0) {}
+	T& operator [](size_t i) {
+		return data[(start + i) % N];
+	}
+	void operator ++() {
+		start = (start + 1) % N;
+	}
+	void operator --() {
+		start = (start + (N - 1)) % N;
+	}
+};
+
+template <class T, size_t N> class Queue {
+	RingBuffer<T, N> buffer;
 	size_t size;
 public:
-	Queue(): start(0), size(0) {}
+	Queue(): size(0) {}
 	void put(const T& element) {
-		data[(start+size)%N] = element;
+		buffer[size] = element;
 		++size;
 	}
 	T take() {
-		T element = data[start];
-		start = (start + 1) % N;
+		T element = buffer[0];
+		++buffer;
 		--size;
 		return element;
 	}
@@ -96,7 +111,7 @@ public:
 template <class T> class Value: public Output<T> {
 	T value;
 public:
-	Value(T value = T()): value(value) {}
+	Value(const T& value = T()): value(value) {}
 	void set(const T& value) {
 		this->value = value;
 	}
@@ -109,7 +124,7 @@ template <class T> class Input: public Output<T> {
 	Value<T> value;
 	Output<T>* output;
 public:
-	Input(): output(&value) {}
+	Input(const T& value = T()): value(value), output(&this->value) {}
 	void connect(Output<T>& output) {
 		this->output = &output;
 	}
