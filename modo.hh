@@ -544,6 +544,55 @@ public:
 	}
 };
 
+class ADSR: public Node<float> {
+	enum class State {
+		Attack,
+		Decay,
+		Sustain,
+		Release
+	} state;
+	float value;
+public:
+	ADSR(): state(State::Sustain), value(0.f) {}
+	Input<MIDIEvent> input;
+	// milliseconds
+	Input<float> attack;
+	Input<float> decay;
+	Input<float> sustain;
+	Input<float> release;
+	float produce() override {
+		const MIDIEvent event = get(input);
+		if (event.is_note_on()) {
+			state = State::Attack;
+		}
+		else if (event.is_note_off()) {
+			state = State::Release;
+		}
+		switch (state) {
+		case State::Attack:
+			value += 1000.f / get(attack) * DT;
+			if (value >= 1.f) {
+				value = 1.f;
+				state = State::Decay;
+			}
+			break;
+		case State::Decay:
+			value = get(sustain) + (value - get(sustain)) * std::pow(0.01f, DT * 1000.f / get(decay));
+			break;
+		case State::Sustain:
+			break;
+		case State::Release:
+			value -= 1000.f / get(release) * DT;
+			if (value <= 0.f) {
+				value = 0.f;
+				state = State::Sustain;
+			}
+			break;
+		}
+		return value;
+	}
+};
+
 class WAVOutput {
 	std::ofstream file;
 	template <class T> void write(T data) {
