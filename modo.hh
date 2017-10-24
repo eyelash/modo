@@ -163,11 +163,10 @@ public:
 };
 
 class Osc: public Node<float> {
-	float sin;
-	float cos;
+	float sin = 0.f;
+	float cos = 1.f;
 public:
 	Input<float> frequency;
-	Osc(): sin(0.f), cos(1.f) {}
 	float produce() override {
 		const float f = get(frequency) * 2.f * PI * DT;
 		cos += -sin * f;
@@ -177,10 +176,9 @@ public:
 };
 
 class Saw: public Node<float> {
-	float value;
+	float value = 0.f;
 public:
 	Input<float> frequency;
-	Saw(): value(0.f) {}
 	float produce() override {
 		value += get(frequency) * (2.0 * DT);
 		if (value > 1.f) {
@@ -191,10 +189,9 @@ public:
 };
 
 class Square: public Node<float> {
-	float value;
+	float value = 0.f;
 public:
 	Input<float> frequency;
-	Square(): value(0.f) {}
 	float produce() override {
 		value += get(frequency) * DT;
 		if (value > 1.f) {
