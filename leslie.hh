@@ -26,9 +26,9 @@ class Leslie: public Node<Sample> {
 	float sin;
 	float cos;
 	float get_linear(float i) {
-		size_t lower = i;
+		std::size_t lower = i;
 		float factor = i - lower;
-		size_t upper = lower + 1;
+		std::size_t upper = lower + 1;
 		return buffer[lower] * (1.f - factor) + buffer[upper] * factor;
 	}
 public:

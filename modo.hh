@@ -28,12 +28,12 @@ using uchar = unsigned char;
 constexpr float PI = 3.1415927f;
 constexpr float DT = 1.f / 44100.f;
 
-template <class T, size_t N> class RingBuffer {
+template <class T, std::size_t N> class RingBuffer {
 	T data[N];
-	size_t start;
+	std::size_t start;
 public:
 	RingBuffer(): data(), start(0) {}
-	T& operator [](size_t i) {
+	T& operator [](std::size_t i) {
 		return data[(start + i) % N];
 	}
 	void operator ++() {
@@ -44,9 +44,9 @@ public:
 	}
 };
 
-template <class T, size_t N> class Queue {
+template <class T, std::size_t N> class Queue {
 	RingBuffer<T, N> buffer;
-	size_t size;
+	std::size_t size;
 public:
 	Queue(): size(0) {}
 	void put(const T& element) {
@@ -286,9 +286,9 @@ public:
 
 class Freeverb: public Node<Sample> {
 	// freeverb algorithm by Jezar at Dreampoint
-	template <size_t N> class Comb {
+	template <std::size_t N> class Comb {
 		std::array<float, N> buffer;
-		size_t position;
+		std::size_t position;
 		float previous;
 	public:
 		Comb(): buffer(), position(0), previous(0.f) {}
@@ -302,9 +302,9 @@ class Freeverb: public Node<Sample> {
 			return output;
 		}
 	};
-	template <size_t N> class AllPass {
+	template <std::size_t N> class AllPass {
 		std::array<float, N> buffer;
-		size_t position;
+		std::size_t position;
 	public:
 		AllPass(): buffer(), position(0) {}
 		float process(float input) {
@@ -315,7 +315,7 @@ class Freeverb: public Node<Sample> {
 			return output - input;
 		}
 	};
-	template <size_t S> class Channel {
+	template <std::size_t S> class Channel {
 		Comb<1116+S> comb1;
 		Comb<1188+S> comb2;
 		Comb<1277+S> comb3;
@@ -501,7 +501,7 @@ class NotePattern {
 	const char* pattern;
 public:
 	NotePattern(uchar note, const char* pattern): note(note), pattern(pattern) {}
-	MIDIEvent operator [](size_t t) const {
+	MIDIEvent operator [](std::size_t t) const {
 		if (t % 6 == 5) {
 			const char prev = pattern[t/6];
 			const char next = pattern[(t/6+1)%16];
@@ -519,7 +519,7 @@ public:
 	}
 };
 
-template <size_t N> class Pattern: public Node<MIDIEvent> {
+template <std::size_t N> class Pattern: public Node<MIDIEvent> {
 	std::array<NotePattern, N> patterns;
 	Queue<MIDIEvent, N> queue;
 	int t;
