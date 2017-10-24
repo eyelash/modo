@@ -253,17 +253,16 @@ public:
 	}
 };
 
-template <size_t N> class Delay: public Node<float> {
-	float buffer[N];
-	size_t position;
+template <std::size_t N> class Delay: public Node<Sample> {
+	RingBuffer<float, N> buffer;
 public:
 	Input<float> input;
-	Delay(): buffer(), position(0) {}
-	float produce() override {
-		const float sample = buffer[position];
-		buffer[position] = get(input);
-		position = (position + 1) % N;
-		return sample;
+	Sample produce() override {
+		const float left = buffer[0] * .25;
+		const float right = buffer[N/2] * .5f;
+		buffer[0] = get(input) + left;
+		++buffer;
+		return Pan::pan(left, -.5f) + Pan::pan(right, .5f);
 	}
 };
 
