@@ -468,13 +468,32 @@ public:
 
 class Frequency: public Node<float> {
 	float frequency;
+	float target_frequency;
+	float factor = 1.f;
+	uchar note = 0;
 public:
 	Input<MIDIEvent> input;
 	float produce() override {
 		const MIDIEvent event = get(input);
 		if (event.is_note_on()) {
-			const uchar note = event.data1;
-			frequency = 440.f * std::pow(2.f, (note-69)/12.f);
+			const bool slide = note;
+			note = event.data1;
+			target_frequency = 440.f * std::pow(2.f, (note-69)/12.f);
+			if (slide) {
+				factor = std::pow(target_frequency / frequency, DT / 0.05f);
+			}
+			else {
+				frequency = target_frequency;
+				factor = 1.f;
+			}
+		}
+		else if (event.is_note_off() && event.data1 == note) {
+			note = 0;
+		}
+		frequency *= factor;
+		if ((factor > 1.f && frequency > target_frequency) || (factor < 1.f && frequency < target_frequency)) {
+			frequency = target_frequency;
+			factor = 1.f;
 		}
 		return frequency;
 	}
@@ -548,6 +567,7 @@ class ADSR: public Node<float> {
 		Release
 	} state;
 	float value;
+	uchar note = 0;
 public:
 	ADSR(): state(State::Sustain), value(0.f) {}
 	Input<MIDIEvent> input;
@@ -559,9 +579,14 @@ public:
 	float produce() override {
 		const MIDIEvent event = get(input);
 		if (event.is_note_on()) {
-			state = State::Attack;
+			const bool slide = note;
+			note = event.data1;
+			if (!slide) {
+				state = State::Attack;
+			}
 		}
-		else if (event.is_note_off()) {
+		else if (event.is_note_off() && event.data1 == note) {
+			note = 0;
 			state = State::Release;
 		}
 		switch (state) {
