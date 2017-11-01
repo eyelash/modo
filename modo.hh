@@ -451,6 +451,46 @@ struct MIDIEvent {
 	}
 };
 
+class Note {
+public:
+	static constexpr uchar C3  = 48;
+	static constexpr uchar Db3 = 49;
+	static constexpr uchar D3  = 50;
+	static constexpr uchar Eb3 = 51;
+	static constexpr uchar E3  = 52;
+	static constexpr uchar F3  = 53;
+	static constexpr uchar Gb3 = 54;
+	static constexpr uchar G3  = 55;
+	static constexpr uchar Ab3 = 56;
+	static constexpr uchar A3  = 57;
+	static constexpr uchar Bb3 = 58;
+	static constexpr uchar B3  = 59;
+	static constexpr uchar C4  = 60;
+	static constexpr uchar Db4 = 61;
+	static constexpr uchar D4  = 62;
+	static constexpr uchar Eb4 = 63;
+	static constexpr uchar E4  = 64;
+	static constexpr uchar F4  = 65;
+	static constexpr uchar Gb4 = 66;
+	static constexpr uchar G4  = 67;
+	static constexpr uchar Ab4 = 68;
+	static constexpr uchar A4  = 69;
+	static constexpr uchar Bb4 = 70;
+	static constexpr uchar B4  = 71;
+	static constexpr uchar C5  = 72;
+	static constexpr uchar Db5 = 73;
+	static constexpr uchar D5  = 74;
+	static constexpr uchar Eb5 = 75;
+	static constexpr uchar E5  = 76;
+	static constexpr uchar F5  = 77;
+	static constexpr uchar Gb5 = 78;
+	static constexpr uchar G5  = 79;
+	static constexpr uchar Ab5 = 80;
+	static constexpr uchar A5  = 81;
+	static constexpr uchar Bb5 = 82;
+	static constexpr uchar B5  = 83;
+};
+
 class MIDIClock: public Node<MIDIEvent> {
 	float value;
 public:
