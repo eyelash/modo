@@ -128,7 +128,7 @@ public:
 	void connect(Output<T>& output) {
 		this->output = &output;
 	}
-	void set(const T& value) {
+	void connect(const T& value) {
 		this->value.set(value);
 		this->output = &this->value;
 	}
@@ -141,7 +141,7 @@ template <class T> void operator >>(Output<T>& o, Input<T>& i) {
 	i.connect(o);
 }
 template <class T> void operator >>(const T& t, Input<T>& i) {
-	i.set(t);
+	i.connect(t);
 }
 
 template <class T> class Node: public Output<T> {
@@ -157,6 +157,53 @@ public:
 		if (t != this->t) {
 			this->t = t;
 			value = produce();
+		}
+		return value;
+	}
+};
+
+template <class... T> class InputTuple;
+template <class Head, class... Tail> class InputTuple<Head, Tail...> {
+	Input<Head> head;
+	InputTuple<Tail...> tail;
+public:
+	template <class Arg0, class... Arg> void connect(Arg0&& argument0, Arg&&... arguments) {
+		head.connect(std::forward<Arg0>(argument0));
+		tail.connect(std::forward<Arg>(arguments)...);
+	}
+	template <class T, class... Arg> decltype(auto) get_and_process(int t, T& node, Arg&&... arguments) {
+		return tail.get_and_process(t, node, std::forward<Arg>(arguments)..., head.get(t));
+	}
+};
+template <> class InputTuple<> {
+public:
+	void connect() {}
+	template <class T, class... Arg> decltype(auto) get_and_process(int t, T& node, Arg&&... arguments) {
+		return node.process(std::forward<Arg>(arguments)...);
+	}
+};
+
+class NodeInfo {
+public:
+	template <class T, class Ret, class... Arg> static Ret get_return_type(Ret (T::*)(Arg...));
+	template <class T, class Ret, class... Arg> static InputTuple<Arg...> get_input_tuple_type(Ret (T::*)(Arg...));
+	template <class T> using return_type = decltype(get_return_type(&T::process));
+	template <class T> using input_tuple_type = decltype(get_input_tuple_type(&T::process));
+};
+
+template <class T> class Node2: public T, public Output<NodeInfo::return_type<T>> {
+	NodeInfo::input_tuple_type<T> inputs;
+	NodeInfo::return_type<T> value;
+	int t;
+public:
+	using T::T;
+	template <class... Arg> void connect(Arg&&... arguments) {
+		inputs.connect(std::forward<Arg>(arguments)...);
+	}
+	NodeInfo::return_type<T> get(int t) override {
+		if (t != this->t) {
+			this->t = t;
+			value = inputs.get_and_process(t, *this);
 		}
 		return value;
 	}
