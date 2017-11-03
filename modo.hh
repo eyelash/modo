@@ -245,9 +245,9 @@ public:
 	}
 };
 
-class Noise: public Node<float> {
+class Noise {
 public:
-	float produce() override {
+	float process() {
 		return Random::get_float() * 2.f - 1.f;
 	}
 };
@@ -535,13 +535,11 @@ public:
 	static constexpr uchar B5  = 83;
 };
 
-class MIDIClock: public Node<MIDIEvent> {
-	float value;
+class MIDIClock {
+	float value = 1.f;
 public:
-	Input<float> bpm;
-	MIDIClock(): value(1.f) {}
-	MIDIEvent produce() override {
-		value += get(bpm) / 60.f * 24.f * DT;
+	MIDIEvent process(float bpm) {
+		value += bpm / 60.f * 24.f * DT;
 		if (value > 1.f) {
 			value -= 1.f;
 			return MIDIEvent(0xF8, 0, 0);
@@ -550,15 +548,13 @@ public:
 	}
 };
 
-class Frequency: public Node<float> {
+class Frequency {
 	float frequency;
 	float target_frequency;
 	float factor = 1.f;
 	uchar note = 0;
 public:
-	Input<MIDIEvent> input;
-	float produce() override {
-		const MIDIEvent event = get(input);
+	float process(MIDIEvent event) {
 		if (event.is_note_on()) {
 			const bool slide = note;
 			note = event.data1;
@@ -583,12 +579,10 @@ public:
 	}
 };
 
-class Velocity: public Node<float> {
+class Velocity {
 	float velocity;
 public:
-	Input<MIDIEvent> input;
-	float produce() override {
-		const MIDIEvent event = get(input);
+	float process(MIDIEvent event) {
 		if (event.is_note_on()) {
 			velocity = event.data2 / 127.f;
 		}
@@ -643,25 +637,18 @@ public:
 	}
 };
 
-class ADSR: public Node<float> {
+class ADSR {
 	enum class State {
 		Attack,
 		Decay,
 		Sustain,
 		Release
-	} state;
-	float value;
+	};
+	State state = State::Sustain;
+	float value = 0.f;
 	uchar note = 0;
 public:
-	ADSR(): state(State::Sustain), value(0.f) {}
-	Input<MIDIEvent> input;
-	// milliseconds
-	Input<float> attack;
-	Input<float> decay;
-	Input<float> sustain;
-	Input<float> release;
-	float produce() override {
-		const MIDIEvent event = get(input);
+	float process(MIDIEvent event, float attack, float decay, float sustain, float release) {
 		if (event.is_note_on()) {
 			const bool slide = note;
 			note = event.data1;
@@ -675,19 +662,19 @@ public:
 		}
 		switch (state) {
 		case State::Attack:
-			value += 1000.f / get(attack) * DT;
+			value += 1000.f / attack * DT;
 			if (value >= 1.f) {
 				value = 1.f;
 				state = State::Decay;
 			}
 			break;
 		case State::Decay:
-			value = get(sustain) + (value - get(sustain)) * std::pow(0.01f, DT * 1000.f / get(decay));
+			value = sustain + (value - sustain) * std::pow(0.01f, DT * 1000.f / decay);
 			break;
 		case State::Sustain:
 			break;
 		case State::Release:
-			value -= 1000.f / get(release) * DT;
+			value -= 1000.f / release * DT;
 			if (value <= 0.f) {
 				value = 0.f;
 				state = State::Sustain;
