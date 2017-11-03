@@ -209,25 +209,23 @@ public:
 	}
 };
 
-class Osc: public Node<float> {
+class Osc {
 	float sin = 0.f;
 	float cos = 1.f;
 public:
-	Input<float> frequency;
-	float produce() override {
-		const float f = get(frequency) * 2.f * PI * DT;
+	float process(float frequency) {
+		const float f = frequency * 2.f * PI * DT;
 		cos += -sin * f;
 		sin += cos * f;
 		return sin;
 	}
 };
 
-class Saw: public Node<float> {
+class Saw {
 	float value = 0.f;
 public:
-	Input<float> frequency;
-	float produce() override {
-		value += get(frequency) * (2.0 * DT);
+	float process(float frequency) {
+		value += frequency * (2.0 * DT);
 		if (value > 1.f) {
 			value -= 2.f;
 		}
@@ -235,12 +233,11 @@ public:
 	}
 };
 
-class Square: public Node<float> {
+class Square {
 	float value = 0.f;
 public:
-	Input<float> frequency;
-	float produce() override {
-		value += get(frequency) * DT;
+	float process(float frequency) {
+		value += frequency * DT;
 		if (value > 1.f) {
 			value -= 1.f;
 		}
