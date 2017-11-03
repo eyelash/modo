@@ -409,7 +409,7 @@ public:
 	}
 };
 
-class Automation: public Node<float> {
+class Automation {
 	const char* automation;
 	const char* cursor;
 	float value;
@@ -444,7 +444,7 @@ class Automation: public Node<float> {
 	}
 public:
 	Automation(const char* automation): automation(automation), cursor(automation), value(0.f), delta(0.f), t(0.f) {}
-	float produce() override {
+	float process() {
 		value += delta * DT;
 		t -= DT;
 		if (t <= 0.f) {
