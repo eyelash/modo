@@ -186,7 +186,9 @@ public:
 class NodeInfo {
 public:
 	template <class T, class Ret, class... Arg> static Ret get_return_type(Ret (T::*)(Arg...));
+	template          <class Ret, class... Arg> static Ret get_return_type(Ret (*)(Arg...));
 	template <class T, class Ret, class... Arg> static InputTuple<Arg...> get_input_tuple_type(Ret (T::*)(Arg...));
+	template          <class Ret, class... Arg> static InputTuple<Arg...> get_input_tuple_type(Ret (*)(Arg...));
 	template <class T> using return_type = decltype(get_return_type(&T::process));
 	template <class T> using input_tuple_type = decltype(get_input_tuple_type(&T::process));
 };
@@ -270,6 +272,13 @@ public:
 	Input<float> panning;
 	Sample produce() override {
 		return pan(get(input), get(panning));
+	}
+};
+
+class Width {
+public:
+	static constexpr Sample process(Sample input, float width) {
+		return input * (.5f + width * .5f) + Sample(input.right, input.left) * (.5f - width * .5f);
 	}
 };
 
