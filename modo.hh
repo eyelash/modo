@@ -303,16 +303,15 @@ public:
 	}
 };
 
-template <std::size_t N> class Delay: public Node<Sample> {
+template <std::size_t N> class Delay {
 	RingBuffer<float, N> buffer;
 public:
-	Input<float> input;
-	Sample produce() override {
-		const float left = buffer[0] * .25;
-		const float right = buffer[N/2] * .5f;
-		buffer[0] = get(input) + left;
+	Sample process(float input, float feedback, float wet, float dry, float width) {
+		const float left = buffer[0] * (feedback * feedback);
+		const float right = buffer[N/2] * feedback;
+		buffer[0] = input + left;
 		++buffer;
-		return Pan::pan(left, -.5f) + Pan::pan(right, .5f);
+		return Width::process(Sample(left, right), width) * wet + Sample(input) * dry;
 	}
 };
 
