@@ -21,10 +21,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 namespace modo {
 
-class Leslie: public Node<Sample> {
+class Leslie {
 	RingBuffer<float, 32> buffer;
-	float sin;
-	float cos;
+	float sin = 0.f;
+	float cos = 1.f;
 	float get_linear(float i) {
 		std::size_t lower = i;
 		float factor = i - lower;
@@ -32,16 +32,13 @@ class Leslie: public Node<Sample> {
 		return buffer[lower] * (1.f - factor) + buffer[upper] * factor;
 	}
 public:
-	Input<float> input;
-	Input<float> frequency_factor;
-	Leslie(): sin(0.f), cos(1.f), frequency_factor(1.f) {}
-	Sample produce() override {
+	Sample process(float input, float frequency_factor) {
 		--buffer;
-		buffer[0] = get(input);
-		const float f = .0002f * get(frequency_factor);
+		buffer[0] = input;
+		const float f = .0002f * frequency_factor;
 		cos += -sin * f;
 		sin += cos * f;
-		return Pan::pan(get_linear(sin * 15.f + 16.f), cos * .3f) + Pan::pan(get_linear(sin * -15.f + 16.f), cos * -.3f);
+		return Pan::process(get_linear(sin * 15.f + 16.f), cos * .3f) + Pan::process(get_linear(sin * -15.f + 16.f), cos * -.3f);
 	}
 };
 
