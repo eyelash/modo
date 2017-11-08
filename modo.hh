@@ -263,15 +263,10 @@ public:
 	}
 };
 
-class Pan: public Node<Sample> {
+class Pan {
 public:
-	static constexpr Sample pan(float input, float panning) {
+	static constexpr Sample process(float input, float panning) {
 		return Sample(input * (.5f - panning * .5f), input * (.5f + panning * .5f));
-	}
-	Input<float> input;
-	Input<float> panning;
-	Sample produce() override {
-		return pan(get(input), get(panning));
 	}
 };
 
@@ -282,11 +277,9 @@ public:
 	}
 };
 
-class Mono: public Node<float> {
+class Mono {
 public:
-	Input<Sample> input;
-	float produce() override {
-		const Sample sample = get(input);
+	static constexpr float process(Sample sample) {
 		return (sample.left + sample.right) * .5f;
 	}
 };
@@ -333,7 +326,7 @@ public:
 	}
 };
 
-class Freeverb: public Node<Sample> {
+class Freeverb {
 	// freeverb algorithm by Jezar at Dreampoint
 	template <std::size_t N> class Comb {
 		std::array<float, N> buffer;
@@ -400,20 +393,15 @@ class Freeverb: public Node<Sample> {
 	Channel<0> channel1;
 	Channel<23> channel2;
 public:
-	Input<float> input;
-	Input<float> room_size;
-	Input<float> damp;
-	Input<float> wet;
-	Input<float> dry;
-	Input<float> width;
-	Sample produce() override {
-		const float _input = get(input) * .03f;
-		const float feedback = get(room_size) * .28f + .7f;
-		const float _damp = get(damp) * .4f;
-		const float output1 = channel1.process(_input, feedback, _damp);
-		const float output2 = channel2.process(_input, feedback, _damp);
-		const Sample w = Pan::pan(get(wet) * 3.f, get(width));
-		return Sample(output1 * w.right + output2 * w.left, output2 * w.right + output1 * w.left) + get(input) * (get(dry) * 2.f);
+	Sample process(float input, float room_size, float damp, float wet, float dry, float width) {
+		const float _input = input * .03f;
+		const float feedback = room_size * .28f + .7f;
+		damp = damp * .4f;
+		wet = wet * 3.f;
+		dry = dry * 2.f;
+		const float output1 = channel1.process(_input, feedback, damp);
+		const float output2 = channel2.process(_input, feedback, damp);
+		return Width::process(Sample(output1, output2), width) * wet + Sample(input) * dry;
 	}
 };
 
