@@ -410,7 +410,7 @@ class Automation {
 	const char* cursor;
 	float value;
 	float delta;
-	float t;
+	int t;
 	float parse_number() {
 		float number = 0.f;
 		float sign = 1.f;
@@ -439,21 +439,22 @@ class Automation {
 		}
 	}
 public:
-	Automation(const char* automation): automation(automation), cursor(automation), value(0.f), delta(0.f), t(0.f) {}
+	Automation(const char* automation): automation(automation), cursor(automation), value(0.f), delta(0.f), t(1) {}
 	float process() {
-		value += delta * DT;
-		t -= DT;
-		if (t <= 0.f) {
+		value += delta;
+		--t;
+		if (t == 0) {
 			if (*cursor != '\0') {
 				const float new_value = parse_number();
 				if (*cursor == '/') {
 					++cursor;
-					t = parse_number();
+					t = parse_number() / DT;
 					delta = (new_value - value) / t;
 				}
 				else {
 					value = new_value;
 					delta = 0.f;
+					t = 1;
 				}
 				skip_space();
 			}
@@ -462,6 +463,12 @@ public:
 			}
 		}
 		return value;
+	}
+	void reset() {
+		cursor = automation;
+		value = 0.f;
+		delta = 0.f;
+		t = 1;
 	}
 };
 
