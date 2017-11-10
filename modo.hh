@@ -284,15 +284,10 @@ public:
 	}
 };
 
-class Overdrive: public Node<float> {
-	static constexpr float clamp(float y) {
-		return y > 1.f ? 1.f : (y < -1.f ? -1.f : y);
-	}
+class Clip {
 public:
-	Input<float> input;
-	Input<float> amount;
-	float produce() override {
-		return clamp(get(input) * get(amount));
+	static constexpr float process(float input) {
+		return input > .9f ? .9f : (input < -.9f ? -.9f : input);
 	}
 };
 
