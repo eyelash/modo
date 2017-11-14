@@ -699,9 +699,8 @@ class WAVOutput {
 		file.write(tag, 4);
 	}
 public:
-	Input<Sample> input;
 	WAVOutput(const char* file_name): file(file_name, std::ios_base::binary) {}
-	void run(int frames) {
+	void run(Output<Sample>& input, int frames) {
 		write_tag("RIFF");
 		write<uint32_t>(36 + frames * 2 * 2);
 		write_tag("WAVE");

@@ -27,6 +27,5 @@ public:
 int main() {
 	Node2<Kick> kick;
 	WAVOutput wav("kick.wav");
-	kick >> wav.input;
-	wav.run(44100);
+	wav.run(kick, 44100);
 }

@@ -37,8 +37,7 @@ class ALSAOutput {
 		}
 	}
 public:
-	Input<Sample> input;
-	void run() {
+	void run(Output<Sample>& input) {
 		constexpr int BUFFER_SIZE = 1024;
 		snd_pcm_t* pcm;
 		snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0);
@@ -58,7 +57,7 @@ public:
 	}
 };
 
-class ALSAInput: public Node<MIDIEvent> {
+class ALSAInput {
 	snd_seq_t* seq;
 	int this_client;
 	int this_port;
@@ -99,7 +98,7 @@ public:
 		this_port = snd_seq_create_simple_port(seq, "MIDI input", SND_SEQ_PORT_CAP_WRITE|SND_SEQ_PORT_CAP_SUBS_WRITE, SND_SEQ_PORT_TYPE_APPLICATION);
 		connect();
 	}
-	MIDIEvent produce() override {
+	MIDIEvent process() {
 		snd_seq_event_t* event;
 		if (snd_seq_event_input(seq, &event) >= 0) {
 			if (event->type == SND_SEQ_EVENT_NOTEON) {
