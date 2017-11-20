@@ -291,6 +291,16 @@ public:
 	}
 };
 
+class LowPass {
+	float previous = 0.f;
+public:
+	float process(float input, float cutoff) {
+		const float output = previous + (input - previous) * cutoff;
+		previous = output;
+		return output;
+	}
+};
+
 template <std::size_t N> class Delay {
 	RingBuffer<float, N> buffer;
 public:
