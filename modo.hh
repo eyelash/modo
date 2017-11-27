@@ -313,21 +313,17 @@ public:
 	}
 };
 
-class Resonator: public Node<float> {
-	float y;
-	float v;
+class Resonator {
+	float s0 = 0.f;
+	float s1 = 0.f;
 public:
-	Input<float> input;
-	Input<float> frequency;
-	Input<float> sensitivity;
-	Resonator(): y(0.f), v(0.f) {}
-	float produce() override {
-		const float f = get(frequency) * 2.f * PI;
-		const float s = get(sensitivity);
-		const float F = (get(input)*s - y)*f*f - v*s*f;
-		v += F * DT;
-		y += v * DT;
-		return y;
+	float process(float input, float frequency, float sensitivity) {
+		// supersample to get a better frequency range
+		for (int i = 0; i < 2; ++i) {
+			s0 = s0 - s1*frequency + (input - s0)*frequency*sensitivity;
+			s1 = s1 + s0*frequency;
+		}
+		return s1;
 	}
 };
 
